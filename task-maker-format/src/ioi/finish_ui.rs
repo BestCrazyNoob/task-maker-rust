@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+use std::io;
 use std::path::{Path, PathBuf};
 
+use anstream::AutoStream;
 use itertools::Itertools;
+use owo_colors::Style;
 use task_maker_dag::ExecutionStatus;
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream};
 
 use crate::ioi::ui_state::{SolutionEvaluationState, TestcaseEvaluationStatus, UIState};
 use crate::ioi::{
@@ -27,13 +29,13 @@ pub const YELLOW_RESOURCE_THRESHOLD: f64 = 0.6;
 /// UI that prints to `stdout` the ending result of the evaluation of a IOI task.
 pub struct FinishUI {
     /// Stream where to print to.
-    stream: StandardStream,
+    stream: AutoStream<io::Stdout>,
 }
 
 impl FinishUITrait<UIState> for FinishUI {
     fn print(state: &UIState) {
         let mut ui = FinishUI {
-            stream: StandardStream::stdout(ColorChoice::Auto),
+            stream: anstream::stdout(),
         };
         ui.print_task_info(state);
         if !state.compilations.is_empty() {
@@ -407,34 +409,16 @@ impl FinishUI {
                     let is_close_to_limits = is_close_to_tl || is_close_to_ml;
                     use TestcaseEvaluationStatus::*;
                     match testcase.status {
-                        Accepted(_) => cwrite!(
-                            self,
-                            if is_close_to_limits {
-                                ORANGE.clone()
-                            } else {
-                                GREEN.clone()
-                            },
-                            "A"
-                        ),
+                        Accepted(_) => {
+                            cwrite!(self, if is_close_to_limits { ORANGE } else { GREEN }, "A")
+                        }
                         WrongAnswer(_) => cwrite!(self, RED, "W"),
-                        Partial(_) => cwrite!(
-                            self,
-                            if is_close_to_limits {
-                                ORANGE.clone()
-                            } else {
-                                YELLOW.clone()
-                            },
-                            "P"
-                        ),
-                        TimeLimitExceeded => cwrite!(
-                            self,
-                            if is_close_to_tl {
-                                ORANGE.clone()
-                            } else {
-                                RED.clone()
-                            },
-                            "T"
-                        ),
+                        Partial(_) => {
+                            cwrite!(self, if is_close_to_limits { ORANGE } else { YELLOW }, "P")
+                        }
+                        TimeLimitExceeded => {
+                            cwrite!(self, if is_close_to_tl { ORANGE } else { RED }, "T")
+                        }
                         WallTimeLimitExceeded => cwrite!(self, RED, "T"),
                         MemoryLimitExceeded => cwrite!(self, RED, "M"),
                         RuntimeError => cwrite!(self, RED, "R"),
@@ -481,24 +465,23 @@ impl FinishUI {
     }
 
     /// Color to use for displaying a score.
-    fn score_color(&mut self, normalized_score: f64) -> &'static ColorSpec {
+    fn score_color(&mut self, normalized_score: f64) -> Style {
         match ScoreStatus::from_score(normalized_score, 1.0) {
-            ScoreStatus::Accepted => &GREEN,
-            ScoreStatus::WrongAnswer => &RED,
-            ScoreStatus::PartialScore => &YELLOW,
+            ScoreStatus::Accepted => GREEN,
+            ScoreStatus::WrongAnswer => RED,
+            ScoreStatus::PartialScore => YELLOW,
         }
     }
 
     /// Color to use for displaying a resource usage.
-    fn resource_color(value: f64, bold_threshold: f64, yellow_threshold: f64) -> ColorSpec {
-        let mut color = ColorSpec::new();
-        if value >= bold_threshold {
-            color.set_bold(true);
-        }
+    fn resource_color(value: f64, bold_threshold: f64, yellow_threshold: f64) -> Style {
         if value >= yellow_threshold {
-            color.set_fg(Some(Color::Yellow));
+            Style::new().yellow().bold()
+        } else if value >= bold_threshold {
+            Style::new().bold()
+        } else {
+            Style::new()
         }
-        color
     }
 
     /// Print some text to the right of the screen. Note that this will print some ANSI escape
@@ -617,7 +600,7 @@ impl FinishUI {
                             printed += 1;
                         }
                         let as_str = result.check.result.as_compact_str();
-                        let color = if result.success { &*GREEN } else { &*RED };
+                        let color = if result.success { GREEN } else { RED };
                         cwrite!(self, color, "{}", as_str);
                         printed += as_str.len();
                     }
