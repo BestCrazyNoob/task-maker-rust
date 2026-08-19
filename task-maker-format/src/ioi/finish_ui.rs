@@ -395,7 +395,7 @@ impl FinishUI {
                 let color = self.score_color(normalized_score);
                 cwrite!(self, color, "[");
                 for tc_num in &state.task.subtasks[st_num].testcases_owned {
-                    // LOGIC DUPLICATED AT ui_state.rs
+                    // Logic duplicated at ui_state.rs
                     let testcase = &eval.testcases[tc_num];
                     let is_close_to_tl = testcase.is_close_to_time_limit(
                         state.task.time_limit,

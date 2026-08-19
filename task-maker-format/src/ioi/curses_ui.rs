@@ -343,7 +343,7 @@ fn testcase_evaluation_status_text<'a>(
     loading: char,
     state: &'a UIState,
 ) -> Span<'a> {
-    // LOGIC DUPLICATED AT finish_ui.rs
+    // Logic duplicated at finish_ui.rs
     let is_close_to_tl = testcase.is_close_to_time_limit(
         state.task.time_limit,
         state.config.extra_time,
